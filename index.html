@@ -7,45 +7,36 @@
 <script src="vendor/chart.umd.js"></script>
 <style>
   :root {
-    color-scheme: light;
-    --surface-1:      #fcfcfb;
-    --page:           #f9f9f7;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #898781;
-    --gridline:       #e1e0d9;
-    --baseline:       #c3c2b7;
-    --border:         rgba(11,11,11,0.10);
-    --series-weight:  #2a78d6;
-    --series-target:  #eb6834;
-    --good:           #0ca30c;
-    --critical:       #d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --surface-1:      #1a1a19;
-      --page:           #0d0d0d;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #898781;
-      --gridline:       #2c2c2a;
-      --baseline:       #383835;
-      --border:         rgba(255,255,255,0.10);
-      --series-weight:  #3987e5;
-      --series-target:  #d95926;
-      --good:           #0ca30c;
-      --critical:       #e66767;
-    }
+    color-scheme: dark;
+    --bg-page:        #050810;
+    --surface-1:      rgba(16, 26, 44, 0.68);
+    --surface-2:      rgba(7, 13, 24, 0.92);
+    --text-primary:   #eaf6ff;
+    --text-secondary: #8fb3d1;
+    --text-muted:     #5b7794;
+    --gridline:       rgba(63, 220, 255, 0.12);
+    --baseline:       rgba(63, 220, 255, 0.35);
+    --border:         rgba(63, 220, 255, 0.28);
+    --series-weight:  #33e0ff;
+    --series-target:  #ff3fb0;
+    --good:           #2bffa8;
+    --critical:       #ff4d6d;
+    --glow-cyan:      rgba(51, 224, 255, 0.55);
+    --glow-magenta:   rgba(255, 63, 176, 0.5);
   }
 
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--page);
+    min-height: 100vh;
     color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 16px;
+    background:
+      radial-gradient(ellipse 80% 50% at 15% -10%, rgba(51, 224, 255, 0.12), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 63, 176, 0.10), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 3px),
+      var(--bg-page);
   }
   .app {
     max-width: 720px;
@@ -55,24 +46,46 @@
     gap: 16px;
   }
   h1 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     margin: 4px 0 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 0 16px var(--glow-cyan);
   }
   .subtitle {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    margin: 0;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    margin: 4px 0 0;
   }
   .card {
-    background: var(--surface-1);
+    position: relative;
+    background: linear-gradient(180deg, rgba(20, 34, 56, 0.6), rgba(6, 11, 21, 0.78));
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 4px;
+    padding: 18px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   }
+  .card::before, .card::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--series-weight);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .card::before { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
+  .card::after { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; }
   .card h2 {
-    font-size: 1rem;
-    margin: 0 0 12px;
-    color: var(--text-primary);
+    font-size: 0.8rem;
+    margin: 0 0 14px;
+    color: var(--series-weight);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    border-left: 3px solid var(--series-weight);
+    padding-left: 8px;
   }
 
   /* summary stat tiles */
@@ -82,22 +95,27 @@
     gap: 10px;
   }
   .stat {
-    background: var(--page);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
+    background: rgba(5, 10, 20, 0.55);
+    border: 1px solid rgba(63, 220, 255, 0.16);
+    border-radius: 2px;
+    padding: 12px 14px;
   }
   .stat .label {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
   .stat .value {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
-    margin-top: 2px;
+    margin-top: 4px;
+    color: var(--series-weight);
+    text-shadow: 0 0 10px var(--glow-cyan);
   }
-  .stat .value.good { color: var(--good); }
-  .stat .value.critical { color: var(--critical); }
+  .stat .value.good { color: var(--good); text-shadow: 0 0 10px rgba(43, 255, 168, 0.5); }
+  .stat .value.critical { color: var(--critical); text-shadow: 0 0 10px rgba(255, 77, 109, 0.5); }
 
   /* period filter */
   .filter-row {
@@ -107,17 +125,23 @@
   }
   .filter-btn {
     border: 1px solid var(--border);
-    background: var(--page);
+    background: transparent;
     color: var(--text-secondary);
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 0.85rem;
+    border-radius: 2px;
+    padding: 7px 16px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
+  .filter-btn:hover { border-color: var(--series-weight); color: var(--text-primary); }
   .filter-btn.active {
     background: var(--series-weight);
     border-color: var(--series-weight);
-    color: #fff;
+    color: #041018;
+    font-weight: 700;
+    box-shadow: 0 0 16px var(--glow-cyan);
   }
 
   .chart-wrap { position: relative; height: 260px; }
@@ -130,39 +154,77 @@
     align-items: end;
   }
   .field { display: flex; flex-direction: column; gap: 4px; }
-  .field label { font-size: 0.8rem; color: var(--text-secondary); }
+  .field label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
   input[type="date"], input[type="number"] {
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 10px;
+    border-radius: 2px;
+    padding: 9px 11px;
     font-size: 0.95rem;
-    background: var(--surface-1);
+    background: rgba(4, 9, 18, 0.75);
     color: var(--text-primary);
+    outline: none;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  input[type="date"]:focus, input[type="number"]:focus {
+    border-color: var(--series-weight);
+    box-shadow: 0 0 0 3px rgba(51, 224, 255, 0.16);
   }
   button {
     border: none;
-    border-radius: 8px;
-    padding: 9px 16px;
-    font-size: 0.9rem;
+    border-radius: 2px;
+    padding: 10px 18px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .btn-primary { background: var(--series-weight); color: #fff; }
-  .btn-secondary { background: var(--page); color: var(--text-primary); border: 1px solid var(--border); }
-  .btn-danger { background: transparent; color: var(--critical); border: 1px solid var(--border); }
-  .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--series-weight), #0090b0);
+    color: #001018;
+    font-weight: 700;
+    box-shadow: 0 0 18px var(--glow-cyan);
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--series-weight); color: var(--text-primary); }
+  .btn-danger {
+    background: transparent;
+    color: var(--critical);
+    border: 1px solid rgba(255, 77, 109, 0.4);
+  }
+  .btn-danger:hover { background: rgba(255, 77, 109, 0.1); box-shadow: 0 0 12px rgba(255, 77, 109, 0.35); }
+  .btn-small { padding: 6px 12px; font-size: 0.7rem; }
 
   /* table */
-  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
   th, td {
     text-align: left;
-    padding: 8px 6px;
+    padding: 10px 8px;
     border-bottom: 1px solid var(--gridline);
     font-variant-numeric: tabular-nums;
   }
-  th { color: var(--text-muted); font-weight: 500; font-size: 0.8rem; }
+  th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  tbody tr { transition: background 0.15s ease; }
+  tbody tr:hover { background: rgba(51, 224, 255, 0.06); }
   td.actions { display: flex; gap: 6px; justify-content: flex-end; }
   .table-scroll { overflow-x: auto; }
-  .empty { color: var(--text-muted); font-size: 0.9rem; padding: 8px 0; }
+  .empty { color: var(--text-muted); font-size: 0.9rem; padding: 8px 0; text-align: center; }
   .delta.up { color: var(--critical); }
   .delta.down { color: var(--good); }
 
@@ -414,22 +476,45 @@
     });
   }
 
+  const neonGlowPlugin = {
+    id: 'neonGlow',
+    beforeDatasetDraw(chart, args) {
+      const color = args.meta.dataset?.options?.borderColor || cssVar('--series-weight');
+      chart.ctx.save();
+      chart.ctx.shadowColor = color;
+      chart.ctx.shadowBlur = 12;
+    },
+    afterDatasetDraw(chart) {
+      chart.ctx.restore();
+    },
+  };
+
   function renderChart() {
     const list = filteredRecords();
     const labels = list.map(r => formatDateLabel(r.date));
     const weights = list.map(r => r.weight);
     const hasTarget = target !== null && !Number.isNaN(target);
 
+    const canvas = document.getElementById('weight-chart');
+    const ctx = canvas.getContext('2d');
+    const fillGradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 260);
+    fillGradient.addColorStop(0, 'rgba(51, 224, 255, 0.35)');
+    fillGradient.addColorStop(1, 'rgba(51, 224, 255, 0)');
+
     const datasets = [{
       label: '体重',
       data: weights,
       borderColor: cssVar('--series-weight'),
-      backgroundColor: cssVar('--series-weight'),
+      backgroundColor: fillGradient,
+      fill: true,
       borderWidth: 2,
       borderCapStyle: 'round',
       borderJoinStyle: 'round',
       pointRadius: 4,
-      pointHoverRadius: 6,
+      pointHoverRadius: 7,
+      pointBackgroundColor: cssVar('--series-weight'),
+      pointBorderColor: cssVar('--text-primary'),
+      pointBorderWidth: 1.5,
       tension: 0.15,
       spanGaps: true,
     }];
@@ -446,11 +531,11 @@
       });
     }
 
-    const ctx = document.getElementById('weight-chart').getContext('2d');
     if (chart) chart.destroy();
     chart = new Chart(ctx, {
       type: 'line',
       data: { labels, datasets },
+      plugins: [neonGlowPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -458,14 +543,18 @@
         plugins: {
           legend: {
             display: hasTarget,
-            labels: { color: cssVar('--text-secondary'), boxWidth: 14 },
+            labels: { color: cssVar('--text-secondary'), boxWidth: 14, usePointStyle: true },
           },
           tooltip: {
-            backgroundColor: cssVar('--surface-1'),
+            backgroundColor: cssVar('--surface-2'),
             titleColor: cssVar('--text-primary'),
             bodyColor: cssVar('--text-secondary'),
-            borderColor: cssVar('--border'),
+            borderColor: cssVar('--series-weight'),
             borderWidth: 1,
+            padding: 10,
+            cornerRadius: 2,
+            titleFont: { family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+            bodyFont: { family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
             callbacks: {
               title: (items) => list[items[0].dataIndex] ? list[items[0].dataIndex].date : '',
             },
