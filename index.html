@@ -1,11 +1,597 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体重管理</title>
+<script src="vendor/chart.umd.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-weight:  #2a78d6;
+    --series-target:  #eb6834;
+    --good:           #0ca30c;
+    --critical:       #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-weight:  #3987e5;
+      --series-target:  #d95926;
+      --good:           #0ca30c;
+      --critical:       #e66767;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 16px;
+  }
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 4px 0 0;
+  }
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card h2 {
+    font-size: 1rem;
+    margin: 0 0 12px;
+    color: var(--text-primary);
+  }
+
+  /* summary stat tiles */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  .stat {
+    background: var(--page);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .stat .label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .stat .value {
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .stat .value.good { color: var(--good); }
+  .stat .value.critical { color: var(--critical); }
+
+  /* period filter */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    border: 1px solid var(--border);
+    background: var(--page);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .filter-btn.active {
+    background: var(--series-weight);
+    border-color: var(--series-weight);
+    color: #fff;
+  }
+
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* form */
+  form.entry-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: end;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.8rem; color: var(--text-secondary); }
+  input[type="date"], input[type="number"] {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    background: var(--surface-1);
+    color: var(--text-primary);
+  }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--series-weight); color: #fff; }
+  .btn-secondary { background: var(--page); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid var(--border); }
+  .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+
+  /* table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+  th { color: var(--text-muted); font-weight: 500; font-size: 0.8rem; }
+  td.actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .table-scroll { overflow-x: auto; }
+  .empty { color: var(--text-muted); font-size: 0.9rem; padding: 8px 0; }
+  .delta.up { color: var(--critical); }
+  .delta.down { color: var(--good); }
+
+  .io-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .target-row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 14px; }
+</style>
 </head>
 <body>
-    <h1>Hello, World!   </h1>
+<div class="app">
+  <div>
+    <h1>体重管理</h1>
+    <p class="subtitle">日々の体重を記録して、推移をグラフで確認できます。</p>
+  </div>
+
+  <div class="card">
+    <h2>サマリー</h2>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2>目標体重</h2>
+    <div class="target-row">
+      <div class="field">
+        <label for="target-input">目標体重 (kg)</label>
+        <input type="number" id="target-input" step="0.1" placeholder="例: 63.0">
+      </div>
+      <button class="btn-primary" id="target-save">保存</button>
+      <button class="btn-secondary" id="target-clear">クリア</button>
+    </div>
+
+    <div class="filter-row" id="period-filter">
+      <button class="filter-btn" data-period="7">直近1週間</button>
+      <button class="filter-btn" data-period="30">直近1ヶ月</button>
+      <button class="filter-btn" data-period="90">直近3ヶ月</button>
+      <button class="filter-btn active" data-period="all">全期間</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>体重推移グラフ</h2>
+    <div class="chart-wrap"><canvas id="weight-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2 id="form-title">記録を追加</h2>
+    <form class="entry-form" id="entry-form">
+      <div class="field">
+        <label for="date-input">日付</label>
+        <input type="date" id="date-input" required>
+      </div>
+      <div class="field">
+        <label for="weight-input">体重 (kg)</label>
+        <input type="number" id="weight-input" step="0.1" min="0" required>
+      </div>
+      <button type="submit" class="btn-primary" id="submit-btn">追加</button>
+      <button type="button" class="btn-secondary" id="cancel-edit" hidden>キャンセル</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>記録一覧</h2>
+    <div class="table-scroll">
+      <table id="records-table">
+        <thead>
+          <tr><th>日付</th><th>体重(kg)</th><th>前回比</th><th></th></tr>
+        </thead>
+        <tbody id="records-body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty-msg" hidden>まだ記録がありません。上のフォームから追加してください。</div>
+  </div>
+
+  <div class="card">
+    <h2>データのバックアップ</h2>
+    <div class="io-row">
+      <button class="btn-secondary" id="export-btn">エクスポート (JSON)</button>
+      <button class="btn-secondary" id="import-btn">インポート</button>
+      <input type="file" id="import-file" accept="application/json" hidden>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const RECORDS_KEY = 'weightRecords';
+  const TARGET_KEY = 'targetWeight';
+
+  let records = loadRecords();
+  let target = loadTarget();
+  let period = 'all';
+  let editingDate = null;
+  let chart = null;
+
+  const style = getComputedStyle(document.documentElement);
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function loadRecords() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (e) { return []; }
+  }
+  function saveRecords() {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  }
+  function loadTarget() {
+    const v = localStorage.getItem(TARGET_KEY);
+    return v ? parseFloat(v) : null;
+  }
+  function saveTarget() {
+    if (target === null || Number.isNaN(target)) localStorage.removeItem(TARGET_KEY);
+    else localStorage.setItem(TARGET_KEY, String(target));
+  }
+
+  function sortedRecords() {
+    return [...records].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  }
+
+  function filteredRecords() {
+    const all = sortedRecords();
+    if (period === 'all') return all;
+    const days = parseInt(period, 10);
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (days - 1));
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return all.filter(r => r.date >= cutoffStr);
+  }
+
+  function formatDateLabel(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+  }
+
+  function upsertRecord(date, weight) {
+    const idx = records.findIndex(r => r.date === date);
+    if (idx >= 0) records[idx] = { date, weight };
+    else records.push({ date, weight });
+    saveRecords();
+  }
+
+  function deleteRecord(date) {
+    records = records.filter(r => r.date !== date);
+    saveRecords();
+    renderAll();
+  }
+
+  function startEdit(date) {
+    const rec = records.find(r => r.date === date);
+    if (!rec) return;
+    editingDate = date;
+    document.getElementById('date-input').value = rec.date;
+    document.getElementById('weight-input').value = rec.weight;
+    document.getElementById('form-title').textContent = '記録を編集';
+    document.getElementById('submit-btn').textContent = '更新';
+    document.getElementById('cancel-edit').hidden = false;
+    document.getElementById('date-input').focus();
+  }
+
+  function cancelEdit() {
+    editingDate = null;
+    document.getElementById('entry-form').reset();
+    document.getElementById('form-title').textContent = '記録を追加';
+    document.getElementById('submit-btn').textContent = '追加';
+    document.getElementById('cancel-edit').hidden = true;
+  }
+
+  function renderStats() {
+    const list = filteredRecords();
+    const all = sortedRecords();
+    const statsEl = document.getElementById('stats');
+    statsEl.innerHTML = '';
+
+    function tile(label, value, cls) {
+      const div = document.createElement('div');
+      div.className = 'stat';
+      div.innerHTML = `<div class="label">${label}</div><div class="value ${cls || ''}">${value}</div>`;
+      statsEl.appendChild(div);
+    }
+
+    if (all.length === 0) {
+      tile('最新体重', '--');
+      tile('前回比', '--');
+      tile('平均', '--');
+      tile('最小/最大', '--');
+      return;
+    }
+
+    const latest = all[all.length - 1];
+    const prev = all.length > 1 ? all[all.length - 2] : null;
+    tile('最新体重', `${latest.weight.toFixed(1)} kg`);
+
+    if (prev) {
+      const diff = latest.weight - prev.weight;
+      const sign = diff > 0 ? '+' : '';
+      const cls = diff > 0 ? 'critical' : diff < 0 ? 'good' : '';
+      tile('前回比', `${sign}${diff.toFixed(1)} kg`, cls);
+    } else {
+      tile('前回比', '--');
+    }
+
+    if (list.length > 0) {
+      const avg = list.reduce((s, r) => s + r.weight, 0) / list.length;
+      const min = Math.min(...list.map(r => r.weight));
+      const max = Math.max(...list.map(r => r.weight));
+      tile('平均', `${avg.toFixed(1)} kg`);
+      tile('最小 / 最大', `${min.toFixed(1)} / ${max.toFixed(1)}`);
+    } else {
+      tile('平均', '--');
+      tile('最小 / 最大', '--');
+    }
+  }
+
+  function renderTable() {
+    const shown = [...filteredRecords()].reverse();
+    const fullAsc = sortedRecords();
+    const body = document.getElementById('records-body');
+    const emptyMsg = document.getElementById('empty-msg');
+    body.innerHTML = '';
+
+    if (shown.length === 0) {
+      emptyMsg.hidden = false;
+      return;
+    }
+    emptyMsg.hidden = true;
+
+    shown.forEach(rec => {
+      const idx = fullAsc.findIndex(r => r.date === rec.date);
+      const prev = idx > 0 ? fullAsc[idx - 1] : null;
+      const tr = document.createElement('tr');
+
+      let deltaHtml = '<td>--</td>';
+      if (prev) {
+        const diff = rec.weight - prev.weight;
+        const sign = diff > 0 ? '+' : '';
+        const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : '';
+        deltaHtml = `<td class="delta ${cls}">${sign}${diff.toFixed(1)}</td>`;
+      }
+
+      tr.innerHTML = `
+        <td>${rec.date}</td>
+        <td>${rec.weight.toFixed(1)}</td>
+        ${deltaHtml}
+        <td class="actions">
+          <button class="btn-secondary btn-small" data-action="edit" data-date="${rec.date}">編集</button>
+          <button class="btn-danger btn-small" data-action="delete" data-date="${rec.date}">削除</button>
+        </td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function renderChart() {
+    const list = filteredRecords();
+    const labels = list.map(r => formatDateLabel(r.date));
+    const weights = list.map(r => r.weight);
+    const hasTarget = target !== null && !Number.isNaN(target);
+
+    const datasets = [{
+      label: '体重',
+      data: weights,
+      borderColor: cssVar('--series-weight'),
+      backgroundColor: cssVar('--series-weight'),
+      borderWidth: 2,
+      borderCapStyle: 'round',
+      borderJoinStyle: 'round',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.15,
+      spanGaps: true,
+    }];
+
+    if (hasTarget) {
+      datasets.push({
+        label: '目標体重',
+        data: list.map(() => target),
+        borderColor: cssVar('--series-target'),
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        tension: 0,
+      });
+    }
+
+    const ctx = document.getElementById('weight-chart').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: hasTarget,
+            labels: { color: cssVar('--text-secondary'), boxWidth: 14 },
+          },
+          tooltip: {
+            backgroundColor: cssVar('--surface-1'),
+            titleColor: cssVar('--text-primary'),
+            bodyColor: cssVar('--text-secondary'),
+            borderColor: cssVar('--border'),
+            borderWidth: 1,
+            callbacks: {
+              title: (items) => list[items[0].dataIndex] ? list[items[0].dataIndex].date : '',
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: cssVar('--gridline') },
+            ticks: { color: cssVar('--text-muted') },
+          },
+          y: {
+            grid: { color: cssVar('--gridline') },
+            ticks: { color: cssVar('--text-muted') },
+            border: { color: cssVar('--baseline') },
+          },
+        },
+      },
+    });
+  }
+
+  function renderAll() {
+    renderStats();
+    renderTable();
+    renderChart();
+  }
+
+  document.getElementById('entry-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = document.getElementById('date-input').value;
+    const weight = parseFloat(document.getElementById('weight-input').value);
+    if (!date || Number.isNaN(weight)) return;
+
+    if (!editingDate && records.some(r => r.date === date)) {
+      const ok = confirm(`${date} の記録は既に存在します。上書きしますか?`);
+      if (!ok) return;
+    }
+
+    upsertRecord(date, weight);
+    cancelEdit();
+    renderAll();
+  });
+
+  document.getElementById('cancel-edit').addEventListener('click', cancelEdit);
+
+  document.getElementById('records-body').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const date = btn.dataset.date;
+    if (btn.dataset.action === 'edit') startEdit(date);
+    else if (btn.dataset.action === 'delete') {
+      if (confirm(`${date} の記録を削除しますか?`)) deleteRecord(date);
+    }
+  });
+
+  document.getElementById('target-input').value = target !== null ? target : '';
+  document.getElementById('target-save').addEventListener('click', () => {
+    const v = parseFloat(document.getElementById('target-input').value);
+    target = Number.isNaN(v) ? null : v;
+    saveTarget();
+    renderChart();
+  });
+  document.getElementById('target-clear').addEventListener('click', () => {
+    target = null;
+    document.getElementById('target-input').value = '';
+    saveTarget();
+    renderChart();
+  });
+
+  document.getElementById('period-filter').addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    period = btn.dataset.period;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderStats();
+    renderChart();
+    renderTable();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    const payload = { weightRecords: records, targetWeight: target };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `weight-records-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-file').click();
+  });
+  document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const incoming = Array.isArray(data.weightRecords) ? data.weightRecords : [];
+        const valid = incoming.filter(r => r && typeof r.date === 'string' && typeof r.weight === 'number');
+        if (valid.length === 0) { alert('有効な記録が見つかりませんでした。'); return; }
+        const ok = confirm(`${valid.length}件の記録をインポートします。既存の同日データは上書きされます。よろしいですか?`);
+        if (!ok) return;
+        valid.forEach(r => upsertRecord(r.date, r.weight));
+        if (typeof data.targetWeight === 'number') {
+          target = data.targetWeight;
+          document.getElementById('target-input').value = target;
+          saveTarget();
+        }
+        renderAll();
+      } catch (err) {
+        alert('ファイルの読み込みに失敗しました。');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('date-input').value = new Date().toISOString().slice(0, 10);
+
+  renderAll();
+})();
+</script>
 </body>
 </html>
